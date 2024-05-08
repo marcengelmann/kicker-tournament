@@ -45,3 +45,5 @@ pylint/
 # Sphinx documentation
 docs/_build/
 /.idea/
+/tournaments/
+/results/
