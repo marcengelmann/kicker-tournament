@@ -18,4 +18,6 @@ class Team:
         return f"{self.player_one} & {self.player_two}"
 
     def name(self, match_uid):
+        #if self.player_one is None or self.player_two is None:
+        #    return f"{self.player_one} {self.player_two}"
         return f"{self.player_one.with_joker(match_uid)} + {self.player_two.with_joker(match_uid)}"

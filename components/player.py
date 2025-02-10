@@ -9,8 +9,16 @@ class Player:
         return self.goals_shot - self.goals_received
 
     @property
+    def points(self):
+        return self.blue.points + self.orange.points
+
+    @property
     def played(self):
         return self.blue.played + self.orange.played
+
+    @property
+    def draws(self):
+        return self.blue.draws + self.orange.draws
 
     @property
     def wins(self):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import random
 
 from components.color_stats import ColorStats
 from components.match import Match
@@ -34,8 +35,11 @@ class Tournament:
             if mtch.uid == uid:
                 return mtch
 
-    def set_players(self, players: [str]):
+    def set_players(self, players: [str], seed: int = 42):
         self.players.clear()
+        random.seed(seed)
+        random.shuffle(players)
+
         uid_counter = 1
         for player_str in players:
             self.players.append(Player(uid_counter, player_str))
@@ -72,7 +76,7 @@ class Tournament:
         self.matches_played += 1
 
     def add_hard_coded_round(self, set_plan: str):
-        set_plan: [str] = set_plan.replace("\t", ";").split(";")
+        set_plan: [str] = set_plan.replace(" ", "").replace("\t", "").split(";")
 
         number_of_matches: int = int(len(set_plan) / 2)
 
@@ -95,6 +99,10 @@ class Tournament:
         self.number_of_rounds += 1
 
     def evaluate_results(self):
+
+        WIN_SCORE = 3
+        DRAW_SCORE = 1
+
         match: Match
         for match in self.matches:
 
@@ -120,20 +128,46 @@ class Tournament:
                 blue_offence: PositionStats = match.team_blue.player_two.offence
                 blue_defence: PositionStats = match.team_blue.player_one.defence
 
-            if match.team_orange_score == 6:
+            if match.team_orange_score > match.team_blue_score:
                 orange_one.wins += 1
                 orange_two.wins += 1
                 orange_offence.wins += 1
                 orange_defence.wins += 1
 
-            elif match.team_blue_score == 6:
+                orange_one.points += WIN_SCORE
+                orange_two.points += WIN_SCORE
+                orange_offence.points += WIN_SCORE
+                orange_defence.points += WIN_SCORE
+
+            elif match.team_orange_score == match.team_blue_score:
+                blue_one.draws += 1
+                blue_two.draws += 1
+                blue_offence.draws += 1
+                blue_defence.draws += 1
+                orange_one.draws += 1
+                orange_two.draws += 1
+                orange_offence.draws += 1
+                orange_defence.draws += 1
+
+                blue_one.points += DRAW_SCORE
+                blue_two.points += DRAW_SCORE
+                blue_offence.points += DRAW_SCORE
+                blue_defence.points += DRAW_SCORE
+                orange_one.points += DRAW_SCORE
+                orange_two.points += DRAW_SCORE
+                orange_offence.points += DRAW_SCORE
+                orange_defence.points += DRAW_SCORE
+
+            else:
                 blue_one.wins += 1
                 blue_two.wins += 1
                 blue_offence.wins += 1
                 blue_defence.wins += 1
 
-            else:
-                raise ValueError("Illegal Score detected")
+                blue_one.points += WIN_SCORE
+                blue_two.points += WIN_SCORE
+                blue_offence.points += WIN_SCORE
+                blue_defence.points += WIN_SCORE
 
             orange_two.most_goals_per_match_received = max(orange_two.most_goals_per_match_received,
                                                            match.team_blue_score)

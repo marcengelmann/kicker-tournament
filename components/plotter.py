@@ -26,6 +26,7 @@ def get_match_percentage_player(tournament: Tournament, player: Player):
 
         elif match.team_orange.player_one is player or match.team_orange.player_two is player:
             score = f"{match.team_orange_score}:{match.team_blue_score}"
+
         if score != "":
             if score in match_dict.keys():
                 match_dict[score] += 1
@@ -34,18 +35,34 @@ def get_match_percentage_player(tournament: Tournament, player: Player):
 
     max_key = max(match_dict, key=match_dict.get)
     if match_dict[max_key] > 1:
-        return f"{match_dict[max_key]} x {'lost' if int(max_key.split(':')[0]) < 6 else 'won'} {max_key}"
+        return f"{match_dict[max_key]} x {('lost' if int(max_key.split(':')[0]) < 6 else 'won') if int(max_key.split(':')[0]) != int(max_key.split(':')[1]) else "draw"} {max_key}"
     return ""
 
 
 def get_match_percentage(tournament: Tournament):
-    data: [str] = []
+    pre_data: dict = {}
 
-    for i in range(5, -1, -1):
-        number_of_hits = len(
-            [m for m in tournament.matches if abs(m.team_blue_score - m.team_orange_score) == (6 - i)])
-        data.append(
-            f"{number_of_hits} x 6:{i} ({100 * number_of_hits / tournament.total_matches:.0f}%)")
+    for match in tournament.matches:
+        match: Match
+        if match.score in pre_data:
+            pre_data[match.score] += 1
+        else:
+            pre_data[match.score] = 1
+
+    data = [f"{v} x {k} ({100 *v / tournament.total_matches:.0f}%)" for k, v in sorted(pre_data.items(), key=lambda item: item[1],reverse=True)]
+
+    # data = []
+    #
+    # for i in range(5, -1, -1):
+    #     number_of_hits = len(
+    #         [m for m in tournament.matches if abs(m.team_blue_score - m.team_orange_score) == (6 - i)])
+    #     data.append(
+    #         f"{number_of_hits} x 6:{i} ({100 * number_of_hits / tournament.total_matches:.0f}%)")
+    # for i in range(5, -1, -1):
+    #     number_of_hits = len(
+    #         [m for m in tournament.matches if (m.team_blue_score == m.team_orange_score and m.team_blue_score == i)])
+    #     data.append(
+    #         f"{number_of_hits} x {i}:{i} ({100 * number_of_hits / tournament.total_matches:.0f}%)")
 
     return data
 
@@ -57,8 +74,17 @@ def run(tournament: Tournament, trivia: [str] = None):
     mtc: Match
     match_plan: [] = []
     for mtc in sorted(tournament.matches, key=lambda x: x.round_uid):
+        # if mtc.team_blue_score > mtc.team_orange_score:
+        #     team_blue_name:str = f"<b>{mtc.team_blue.name(mtc.uid)}</b>"
+        #     team_orange_name:str = mtc.team_orange.name(mtc.uid)
+        # elif mtc.team_blue_score < mtc.team_orange_score:
+        #     team_blue_name:str = mtc.team_blue.name(mtc.uid)
+        #     team_orange_name:str = f"<b>{mtc.team_orange.name(mtc.uid)}</b>"
+        # else:
+        team_blue_name: str = mtc.team_blue.name(mtc.uid)
+        team_orange_name: str = mtc.team_orange.name(mtc.uid)
         match_plan.append(
-            [mtc.round_uid, mtc.uid, mtc.team_orange.name(mtc.uid), mtc.score, mtc.team_blue.name(mtc.uid)])
+            [mtc.round_uid, mtc.uid, team_orange_name, mtc.score, team_blue_name])
 
     match_headers: [str] = ['Round', 'Match', 'Team Orange', 'Score', 'Team Blue']
 
@@ -66,7 +92,8 @@ def run(tournament: Tournament, trivia: [str] = None):
     rank: int = 1
 
     sorted_players: [Player] = sorted(tournament.players,
-                                      key=lambda x: (x.wins, x.dif, x.goals_shot, -x.goals_received, -ord(x.name[0])),
+                                      key=lambda x: (
+                                          x.points, x.wins, x.dif, x.goals_shot, -x.goals_received, -ord(x.name[0])),
                                       reverse=True)
 
     previous_equal = False
@@ -88,7 +115,12 @@ def run(tournament: Tournament, trivia: [str] = None):
                     previous_equal = False
                     rank += 1
 
-        log.append([rank, str(player), f"{player.wins} / {player.played}", f"{player.dif :+d}",
+        log.append([rank,
+                    str(player),
+                    player.points,
+                    f"{player.wins} / {player.played}",
+                    f"{player.draws}",
+                    f"{player.dif :+d}",
                     f"{player.goals_shot} ({100 * (player.goals_shot / (player.played * 6)) if player.played != 0 else 0:.0f}%)",
                     f"{player.goals_received} ({100 * (player.goals_received / (player.played * 6)) if player.played != 0 else 0:.0f}%)",
                     player.min_goals_scored, player.min_goals_received,
@@ -100,15 +132,23 @@ def run(tournament: Tournament, trivia: [str] = None):
                     f"{player.offence.wins} / {player.offence.played}",
                     f"{player.defence.wins} / {player.defence.played}",
                     get_match_percentage_player(tournament, player),
-                    trivia[i]
+                    # trivia[i]
                     ])
 
         rank += 1
 
-    table_headers: [str] = ['#', 'Name', 'Wins', 'Dif', f'Scored (Ratio)',
+    table_headers: [str] = ['#',
+                            'Name',
+                            "Points",
+                            'Wins',
+                            'Draws',
+                            'Goal Dif.',
+                            f'Scored (Ratio)',
                             f'Received (Ratio)', 'Worst scored',
-                            'Best received', "Avg. scored", "Avg. received", 'Avg. Dif', 'Blue Wins', 'Orange Wins',
-                            'Off. Wins', 'Def. Wins', 'Same scores', 'Fun facts']
+                            'Best received', "Avg. scored", "Avg. received", 'Avg. Dif.', 'Blue Wins', 'Orange Wins',
+                            'Off. Wins', 'Def. Wins', 'Same scores',
+                            # 'Fun facts'
+                            ]
 
     non_jokers: [Player] = [p for p in tournament.players if not p.is_joker]
 
@@ -142,24 +182,34 @@ def run(tournament: Tournament, trivia: [str] = None):
                      "Result Percentage", "Blue vs. Orange"]
 
     domains = [
-        {'x': [0.0, 0.39], 'y': [0.45, 1.0]},
-        {'x': [0.41, 1.0], 'y': [0.51, 1.0]},
-        {'x': [0.0, 1.0], 'y': [0.0, 0.49]},
+        {'x': [0.0, 0.25], 'y': [0.0, 1.0]},
+        {'x': [0.26, 1.0], 'y': [0.0, 0.45]},
+        {'x': [0.26, 1.0], 'y': [0.46, 1.0]},
     ]
+    colors = ['rgb(201, 176, 55)', 'rgb(215, 215, 215)', 'rgb(173, 138, 86)',
+              'rgb(235, 240, 248)']
 
     traces = [go.Table(header=dict(values=match_headers),
-                       cells=dict(values=[[i[j] for i in match_plan] for j in range(len(match_plan[0]))], height=23),
+                       cells=dict(
+                           values=[[i[j] for i in match_plan] for j in range(len(match_plan[0]))],
+                           height=26
+                       ),
                        domain=domains[0],
-                       columnwidth=[15, 20, 80, 20, 80],
+                       columnwidth=[20, 20, 80, 20, 80],
+
                        ),
               go.Table(header=dict(values=stats_headers),
-                       cells=dict(values=stats, height=23),
+                       cells=dict(values=stats, height=26),
                        domain=domains[1]
                        ),
               go.Table(header=dict(values=table_headers),
-                       cells=dict(values=[[i[j] for i in log] for j in range(len(log[0]))], height=23),
+                       cells=dict(
+                           values=[[i[j] for i in log] for j in range(len(log[0]))],
+                           height=26,
+                           fill_color=[colors],
+                       ),
                        domain=domains[2],
-                       columnwidth=[10, 30, 15, 10, 30, 30, 30, 30, 25, 30, 20, 25, 25, 25, 25, 30, 40],
+                       columnwidth=[10, 30, 15, 20, 15, 20, 30, 30, 30, 25, 30, 20, 25, 25, 25, 25, 30, 40],
                        )]
 
     fig = go.Figure(data=traces)
@@ -170,7 +220,7 @@ def run(tournament: Tournament, trivia: [str] = None):
 
     fig.update_layout(
         title=title_label,
-        margin=dict(l=50, r=50, t=50, b=20),
+        margin=dict(l=10, r=10, t=30, b=10),
     )
 
     with open(f"../results/{tournament.title.lower().replace(' ', '_')}.html", 'w', encoding='utf-8') as file:
